@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Condução Segura — Painel de Multas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --accent: #f59e0b;
+    --accent2: #ef4444;
+    --green: #10b981;
+    --blue: #3b82f6;
+    --mono: 'DM Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    font-size: 14px;
+  }
+
+  /* Header */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 56px;
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 100;
+  }
+  .logo { font-size: 13px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); }
+  .logo span { color: var(--muted); font-weight: 400; }
+  .header-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; gap: 1.5rem; align-items: center; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); display: inline-block; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* Layout */
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem; }
+
+  /* Métricas */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 2rem; }
+  .metric { background: var(--surface); padding: 1.25rem 1.5rem; }
+  .metric-label { font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.5rem; }
+  .metric-value { font-size: 28px; font-weight: 800; line-height: 1; }
+  .metric-value.amber { color: var(--accent); }
+  .metric-value.red { color: var(--accent2); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.blue { color: var(--blue); }
+  .metric-sub { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 4px; }
+
+  /* Filtros */
+  .toolbar { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; align-items: center; flex-wrap: wrap; }
+  .search { flex: 1; min-width: 200px; background: var(--surface); border: 1px solid var(--border2); border-radius: 8px; padding: 0.5rem 1rem; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; }
+  .search:focus { border-color: var(--accent); }
+  .search::placeholder { color: var(--muted); }
+  .filter-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.5rem 1rem; color: var(--muted); font-family: var(--sans); font-size: 12px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+  .filter-btn:hover, .filter-btn.active { border-color: var(--accent); color: var(--accent); }
+  .count-badge { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  /* Cards veículos */
+  .vehicles { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+
+  .vehicle-card { background: var(--surface); }
+  .vehicle-header {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr auto auto;
+    gap: 1rem;
+    padding: 1rem 1.25rem;
+    cursor: pointer;
+    align-items: center;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+  }
+  .vehicle-header:hover { background: var(--surface2); }
+  .vehicle-header.has-inf { border-left-color: var(--accent2); }
+
+  .v-index { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; }
+  .v-info { min-width: 0; }
+  .v-placa { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--accent); letter-spacing: 0.1em; }
+  .v-modelo { font-size: 12px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v-renavam { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+
+  .inf-count {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .inf-count.has { background: rgba(239,68,68,0.15); color: var(--accent2); border: 1px solid rgba(239,68,68,0.25); }
+  .inf-count.none { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+
+  .chevron { color: var(--muted); font-size: 16px; transition: transform 0.2s; }
+  .vehicle-card.open .chevron { transform: rotate(180deg); }
+
+  /* Detalhes da infração */
+  .vehicle-body { display: none; border-top: 1px solid var(--border); }
+  .vehicle-card.open .vehicle-body { display: block; }
+
+  .inf-item { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); }
+  .inf-item:last-child { border-bottom: none; }
+
+  .inf-tag { display: inline-block; font-size: 10px; font-family: var(--mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent2); border: 1px solid rgba(239,68,68,0.3); border-radius: 4px; padding: 2px 8px; margin-bottom: 0.75rem; }
+
+  .inf-motivo { font-size: 12px; color: var(--text); margin-bottom: 1rem; line-height: 1.5; font-weight: 600; }
+
+  .inf-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; margin-bottom: 1rem; }
+  .inf-field { }
+  .inf-field-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px; }
+  .inf-field-value { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .inf-field-value.valor { color: var(--accent); font-weight: 500; font-size: 14px; }
+
+  /* Ações */
+  .acoes-section { margin-top: 1rem; }
+  .acoes-title { font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.75rem; }
+  .acoes-grupos { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .acoes-grupo { flex: 1; min-width: 160px; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
+  .acoes-grupo-titulo { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
+  .acao-item { padding: 3px 0; }
+  .acao-btn {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; padding: 6px 10px; border-radius: 6px;
+    font-size: 11px; font-family: var(--sans); cursor: pointer;
+    border: 1px solid var(--green); color: var(--green);
+    background: rgba(16,185,129,0.08); transition: all 0.15s; text-align: left;
+  }
+  .acao-btn:hover { background: rgba(16,185,129,0.18); }
+  .acao-btn:active { transform: scale(0.97); }
+  .acao-btn-disabled {
+    display: flex; align-items: center; gap: 6px;
+    width: 100%; padding: 6px 10px; border-radius: 6px;
+    font-size: 11px; font-family: var(--sans);
+    border: 1px solid var(--border); color: var(--muted);
+    background: transparent; text-decoration: line-through; opacity: 0.45;
+    cursor: not-allowed;
+  }
+  .toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem;
+    background: var(--surface2); border: 1px solid var(--green);
+    color: var(--green); font-family: var(--mono); font-size: 12px;
+    padding: 0.75rem 1.25rem; border-radius: 8px;
+    opacity: 0; transform: translateY(8px);
+    transition: all 0.2s; pointer-events: none; z-index: 999;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* Empty */
+  .empty { padding: 3rem; text-align: center; color: var(--muted); font-size: 13px; }
+
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .inf-grid { grid-template-columns: repeat(2, 1fr); }
+    .acoes-grupos { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">Condução Segura <span>/ painel de multas</span></div>
+  <div class="header-meta">
+    <span><span class="dot"></span> sistema ativo</span>
+    <span id="last-update">—</span>
+  </div>
+</header>
+
+<div class="container">
+  <div class="metrics" id="metrics"></div>
+  <div class="toolbar">
+    <input class="search" type="text" placeholder="Buscar placa, modelo, auto de infração..." id="search">
+    <button class="filter-btn active" data-filter="all">Todos</button>
+    <button class="filter-btn" data-filter="has">Com infração</button>
+    <button class="filter-btn" data-filter="none">Sem infração</button>
+    <span class="count-badge" id="count-badge"></span>
+  </div>
+  <div class="vehicles" id="vehicles-list"></div>
+</div>
+
+<script>
+const DADOS = [
+  {
+    placa: "POX0E17", modelo: "MAN/TGX 29.480 6X4 T", renavam: "01178305756",
+    infracoes: [
+      {
+        motivo: "DEIXAR DE ADENTRAR AS AREAS DESTINADAS A PESAGEM DE VEICULOS\nPlaca à época da infração: POX0E17",
+        "Órgão Autuador": "000300 - DEPARTAMENTO NACIONAL DE INFRA-ESTRUTURA DE TRANSP",
+        "Local da Infração": "BR316 KM 20,000 - TERESINA",
+        "Data/Hora do Cometimento da Infração": "28/04/2026 10:10",
+        "Número do Auto de Infração": "M000112157",
+        "Código da Infração": "6068 - 2",
+        "Número RENAINF": "11310300313",
+        "Valor Original": "R$ 195,23",
+        "Data Limite para Interposição de Recurso": "15/06/2026",
+        extraido_em: "2026-05-20 13:13:17",
+        acoes: {
+          "Pagamento": { "Desconto de 40%": true, "Desconto de 20%": false, "Solicitar Boleto sem Desconto": true, "Visualizar Boleto": false },
+          "Real Infrator": { "Indicar Real Infrator": true, "Cancelar Indicação": false, "PDF Indicação e Aceite": false },
+          "Notificações": { "Notificação de Autuação": true, "Notificação de Penalidade": false, "Advertência por Escrito": false }
+        }
+      }
+    ]
+  },
+  {
+    placa: "PMJ3687", modelo: "VOLKSWAGEN/DELIVERY 9.170", renavam: "00987654321",
+    infracoes: [
+      {
+        motivo: "TRANSITAR EM VELOCIDADE SUPERIOR A MAXIMA PERMITIDA EM ATE 20%\nPlaca à época da infração: PMJ3687",
+        "Órgão Autuador": "213890 - PREF. DE CE FORTALEZA",
+        "Local da Infração": "AV. RUI BARBOSA, 2633 - FORTALEZA",
+        "Data/Hora do Cometimento da Infração": "22/02/2026 16:40",
+        "Número do Auto de Infração": "A600501691",
+        "Código da Infração": "7455 - 0",
+        "Número RENAINF": "11126748420",
+        "Valor Original": "R$ 130,16",
+        "Data Limite para Interposição de Recurso": "01/04/2026",
+        extraido_em: "2026-05-20 13:20:00",
+        acoes: {
+          "Pagamento": { "Desconto de 40%": false, "Desconto de 20%": false, "Solicitar Boleto sem Desconto": true, "Visualizar Boleto": true },
+          "Real Infrator": { "Indicar Real Infrator": false, "Cancelar Indicação": false, "PDF Indicação e Aceite": true },
+          "Notificações": { "Notificação de Autuação": true, "Notificação de Penalidade": true, "Advertência por Escrito": false }
+        }
+      },
+      {
+        motivo: "AVANÇAR SINAL VERMELHO DO SEMÁFORO\nPlaca à época da infração: PMJ3687",
+        "Órgão Autuador": "213890 - PREF. DE CE FORTALEZA",
+        "Local da Infração": "AV. BEZERRA DE MENEZES X R. PROF. DIAS DA ROCHA - FORTALEZA",
+        "Data/Hora do Cometimento da Infração": "10/03/2026 08:15",
+        "Número do Auto de Infração": "M601039427",
+        "Código da Infração": "6050 - 3",
+        "Número RENAINF": "11006737758",
+        "Valor Original": "R$ 293,47",
+        "Data Limite para Interposição de Recurso": "04/05/2026",
+        extraido_em: "2026-05-20 13:22:00",
+        acoes: {
+          "Pagamento": { "Desconto de 40%": false, "Desconto de 20%": false, "Solicitar Boleto sem Desconto": false, "Visualizar Boleto": true },
+          "Real Infrator": { "Indicar Real Infrator": false, "Cancelar Indicação": false, "PDF Indicação e Aceite": false },
+          "Notificações": { "Notificação de Autuação": true, "Notificação de Penalidade": true, "Advertência por Escrito": false }
+        }
+      }
+    ]
+  },
+  {
+    placa: "SAU6H46", modelo: "VOLVO/VM 270 6X2R", renavam: "00112233445",
+    infracoes: [
+      {
+        motivo: "CONDUZIR O VEICULO COM EQUIPAMENTO OBRIGATORIO INEFICIENTE/INOPERANTE\nPlaca à época da infração: SAU6H46",
+        "Órgão Autuador": "051001 - DETRAN CE",
+        "Local da Infração": "BR-020 KM 15 - CAUCAIA",
+        "Data/Hora do Cometimento da Infração": "12/05/2026 16:30",
+        "Número do Auto de Infração": "N005207078",
+        "Código da Infração": "5685 - 1",
+        "Número RENAINF": "11400000001",
+        "Valor Original": "R$ 195,23",
+        "Data Limite para Interposição de Recurso": "25/06/2026",
+        extraido_em: "2026-05-21 09:00:00",
+        acoes: {
+          "Pagamento": { "Desconto de 40%": true, "Desconto de 20%": true, "Solicitar Boleto sem Desconto": true, "Visualizar Boleto": false },
+          "Real Infrator": { "Indicar Real Infrator": true, "Cancelar Indicação": false, "PDF Indicação e Aceite": false },
+          "Notificações": { "Notificação de Autuação": true, "Notificação de Penalidade": false, "Advertência por Escrito": false }
+        }
+      }
+    ]
+  },
+  { placa: "HUJ0604", modelo: "HONDA/CG 125 CARGO", renavam: "00618962964", infracoes: [] },
+  { placa: "HUZ0768", modelo: "TOYOTA/BAND. BJ55LP B", renavam: "00623469154", infracoes: [] },
+  { placa: "HVZ9851", modelo: "HONDA/CG 125 TITAN", renavam: "00693934670", infracoes: [] },
+];
+
+let filtro = 'all';
+let busca = '';
+
+function calcMetrics() {
+  const total = DADOS.length;
+  const comInf = DADOS.filter(v => v.infracoes.length > 0).length;
+  const totalInf = DADOS.reduce((s, v) => s + v.infracoes.length, 0);
+  const totalValor = DADOS.reduce((s, v) => {
+    return s + v.infracoes.reduce((si, inf) => {
+      const val = parseFloat((inf["Valor Original"] || "0").replace(/[^0-9,]/g,'').replace(',','.')) || 0;
+      return si + val;
+    }, 0);
+  }, 0);
+  return { total, comInf, totalInf, totalValor };
+}
+
+function renderMetrics() {
+  const m = calcMetrics();
+  document.getElementById('metrics').innerHTML = `
+    <div class="metric">
+      <div class="metric-label">Total de veículos</div>
+      <div class="metric-value blue">${m.total}</div>
+      <div class="metric-sub">no cache atual</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Com infrações</div>
+      <div class="metric-value red">${m.comInf}</div>
+      <div class="metric-sub">${Math.round(m.comInf/m.total*100)}% da frota</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Total de multas</div>
+      <div class="metric-value amber">${m.totalInf}</div>
+      <div class="metric-sub">não pagas</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Valor total</div>
+      <div class="metric-value green">R$ ${m.totalValor.toFixed(2).replace('.',',')}</div>
+      <div class="metric-sub">em aberto</div>
+    </div>
+  `;
+}
+
+function simDownload(nome, auto) {
+  const t = document.getElementById('toast');
+  t.textContent = `↓ baixando: ${nome} — Auto ${auto}`;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+function renderAcoes(acoes, auto) {
+  if (!acoes) return '';
+  return `
+    <div class="acoes-section">
+      <div class="acoes-title">Ações disponíveis</div>
+      <div class="acoes-grupos">
+        ${Object.entries(acoes).map(([grupo, itens]) => `
+          <div class="acoes-grupo">
+            <div class="acoes-grupo-titulo">${grupo}</div>
+            ${Object.entries(itens).map(([nome, disp]) => `
+              <div class="acao-item">
+                ${disp
+                  ? `<button class="acao-btn" onclick="simDownload('${nome.replace(/'/g,"\'")}','${auto}')">
+                      <span>↓</span> ${nome}
+                    </button>`
+                  : `<div class="acao-btn-disabled"><span>—</span> ${nome}</div>`
+                }
+              </div>
+            `).join('')}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderInfracao(inf, idx) {
+  const campos = ["Órgão Autuador","Local da Infração","Data/Hora do Cometimento da Infração","Número do Auto de Infração","Código da Infração","Valor Original","Data Limite para Interposição de Recurso"];
+  return `
+    <div class="inf-item">
+      <div class="inf-tag">infração #${idx + 1}</div>
+      <div class="inf-motivo">${inf.motivo.split('\n')[0]}</div>
+      <div class="inf-grid">
+        ${campos.filter(c => inf[c]).map(c => `
+          <div class="inf-field">
+            <div class="inf-field-label">${c}</div>
+            <div class="inf-field-value ${c === 'Valor Original' ? 'valor' : ''}">${inf[c]}</div>
+          </div>
+        `).join('')}
+      </div>
+      ${renderAcoes(inf.acoes, inf["Número do Auto de Infração"] || "—")}
+    </div>
+  `;
+}
+
+function renderVehicles() {
+  const lista = document.getElementById('vehicles-list');
+  const filtrado = DADOS.filter(v => {
+    const matchFiltro = filtro === 'all' || (filtro === 'has' && v.infracoes.length > 0) || (filtro === 'none' && v.infracoes.length === 0);
+    const q = busca.toLowerCase();
+    const matchBusca = !q || v.placa.toLowerCase().includes(q) || v.modelo.toLowerCase().includes(q) ||
+      v.infracoes.some(inf => (inf["Número do Auto de Infração"] || '').toLowerCase().includes(q) || (inf.motivo||'').toLowerCase().includes(q));
+    return matchFiltro && matchBusca;
+  });
+
+  document.getElementById('count-badge').textContent = `${filtrado.length} veículo(s)`;
+
+  if (!filtrado.length) {
+    lista.innerHTML = '<div class="empty">Nenhum veículo encontrado.</div>';
+    return;
+  }
+
+  lista.innerHTML = filtrado.map((v, i) => `
+    <div class="vehicle-card ${v.infracoes.length > 0 ? '' : ''}" id="vc-${i}">
+      <div class="vehicle-header ${v.infracoes.length > 0 ? 'has-inf' : ''}" onclick="toggle(${i})">
+        <div class="v-index">${String(i+1).padStart(2,'0')}</div>
+        <div class="v-info">
+          <div class="v-placa">${v.placa}</div>
+          <div class="v-modelo">${v.modelo}</div>
+          <div class="v-renavam">${v.renavam}</div>
+        </div>
+        <div class="inf-count ${v.infracoes.length > 0 ? 'has' : 'none'}">
+          ${v.infracoes.length > 0 ? v.infracoes.length + ' multa' + (v.infracoes.length > 1 ? 's' : '') : 'sem multas'}
+        </div>
+        <div class="chevron">▾</div>
+      </div>
+      ${v.infracoes.length > 0 ? `
+        <div class="vehicle-body">
+          ${v.infracoes.map((inf, idx) => renderInfracao(inf, idx)).join('')}
+        </div>
+      ` : ''}
+    </div>
+  `).join('');
+}
+
+function toggle(i) {
+  const card = document.getElementById(`vc-${i}`);
+  if (card) card.classList.toggle('open');
+}
+
+document.getElementById('search').addEventListener('input', e => {
+  busca = e.target.value;
+  renderVehicles();
+});
+
+document.querySelectorAll('.filter-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filtro = btn.dataset.filter;
+    renderVehicles();
+  });
+});
+
+const ultima = DADOS.flatMap(v => v.infracoes).map(i => i.extraido_em).sort().pop();
+if (ultima) document.getElementById('last-update').textContent = 'atualizado ' + ultima.split(' ')[0];
+
+renderMetrics();
+renderVehicles();
+</script>
+<div class="toast" id="toast"></div>
+</body>
+</html>
